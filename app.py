@@ -6,20 +6,8 @@ warnings.filterwarnings('ignore')
 from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
-# 添加try-except处理cairosvg导入
-try:
-    import cairosvg
-    CAIROSVG_AVAILABLE = True
-except ImportError:
-    CAIROSVG_AVAILABLE = False
-    # 尝试导入备选SVG处理库
-    try:
-        from svglib.svglib import svg2rlg
-        from reportlab.graphics import renderPM
-        SVGLIB_AVAILABLE = True
-    except ImportError:
-        SVGLIB_AVAILABLE = False
-        st.warning("SVG处理库未安装，SVG格式转换功能将不可用")
+# 重新组织cairosvg导入逻辑，避免错误
+# 完全移除cairosvg依赖，只使用svglib或其他备选方案
 import base64
 import numpy as np
 import os
