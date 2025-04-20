@@ -3,20 +3,14 @@ from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
 import os  # 确保os模块在这里导入
-# 添加try-except导入cairosvg，避免因缺少这个库而导致整个应用崩溃
+# 移除cairosvg依赖，使用svglib作为唯一的SVG处理库
 try:
-    import cairosvg
-    CAIROSVG_AVAILABLE = True
+    from svglib.svglib import svg2rlg
+    from reportlab.graphics import renderPM
+    SVGLIB_AVAILABLE = True
 except ImportError:
-    CAIROSVG_AVAILABLE = False
-    # 尝试导入备选SVG处理库
-    try:
-        from svglib.svglib import svg2rlg
-        from reportlab.graphics import renderPM
-        SVGLIB_AVAILABLE = True
-    except ImportError:
-        SVGLIB_AVAILABLE = False
-        st.warning("SVG processing libraries not installed, SVG conversion will not be available")
+    SVGLIB_AVAILABLE = False
+    st.warning("SVG processing libraries not installed, SVG conversion will not be available")
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 import re
@@ -37,8 +31,31 @@ BASE_URL = "https://api.deepbricks.ai/v1/"
 GPT4O_MINI_API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 
-# 从svg_utils导入SVG转换函数
-from svg_utils import convert_svg_to_png
+# 自定义SVG转PNG函数，不依赖外部库
+def convert_svg_to_png(svg_content):
+    """
+    将SVG内容转换为PNG格式的PIL图像对象
+    使用svglib库来处理，不再依赖cairosvg
+    """
+    try:
+        if SVGLIB_AVAILABLE:
+            # 使用svglib将SVG内容转换为PNG
+            from io import BytesIO
+            svg_bytes = BytesIO(svg_content)
+            drawing = svg2rlg(svg_bytes)
+            png_bytes = BytesIO()
+            renderPM.drawToFile(drawing, png_bytes, fmt="PNG")
+            png_bytes.seek(0)
+            return Image.open(png_bytes).convert("RGBA")
+        else:
+            st.error("SVG conversion libraries not available. Please install svglib and reportlab.")
+            return None
+    except Exception as e:
+        st.error(f"Error converting SVG to PNG: {str(e)}")
+        return None
+
+# 设置默认生成的设计数量，取代UI上的选择按钮
+DEFAULT_DESIGN_COUNT = 5  # 可以设置为1, 3, 5，分别对应原来的low, medium, high
 
 def get_ai_design_suggestions(user_preferences=None):
     """Get design suggestions from GPT-4o-mini with more personalized features"""
@@ -126,7 +143,7 @@ def generate_vector_image(prompt):
             if image_resp.status_code == 200:
                 content_type = image_resp.headers.get("Content-Type", "")
                 if "svg" in content_type.lower():
-                    # 使用集中的SVG处理函数
+                    # 使用更新后的SVG处理函数
                     return convert_svg_to_png(image_resp.content)
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
@@ -445,6 +462,9 @@ def show_high_recommendation_without_explanation():
     st.title("👕 AI Recommendation Experiment Platform")
     st.markdown("### Study1-Let AI Design Your T-shirt")
     
+    # 显示实验组和设计数量信息
+    st.info(f"您当前在Study1实验组，AI将为您生成 {DEFAULT_DESIGN_COUNT} 个T恤设计方案")
+    
     # 初始化会话状态变量
     if 'user_prompt' not in st.session_state:
         st.session_state.user_prompt = ""
@@ -457,7 +477,13 @@ def show_high_recommendation_without_explanation():
     if 'should_generate' not in st.session_state:
         st.session_state.should_generate = False
     if 'recommendation_level' not in st.session_state:
-        st.session_state.recommendation_level = "low"
+        # 设置固定推荐级别，不再允许用户选择
+        if DEFAULT_DESIGN_COUNT == 1:
+            st.session_state.recommendation_level = "low"
+        elif DEFAULT_DESIGN_COUNT == 3:
+            st.session_state.recommendation_level = "medium"
+        else:  # 5或其他值
+            st.session_state.recommendation_level = "high"
     if 'generated_designs' not in st.session_state:
         st.session_state.generated_designs = []
     if 'selected_design_index' not in st.session_state:
@@ -599,31 +625,19 @@ def show_high_recommendation_without_explanation():
         # 设计提示词和推荐级别选择区
         st.markdown("### Design Options")
         
-        # 重新实现推荐级别选择，确保不会有两排按钮
-        level_cols = st.columns(3)
-        levels = ["low", "medium", "high"]
-        level_labels = ["Low (1)", "Medium (3)", "High (5)"]
-        
-        with level_cols[0]:
-            if st.button(level_labels[0], key="btn_low", 
-                       type="primary" if st.session_state.recommendation_level == "low" else "secondary",
-                       use_container_width=True):
-                st.session_state.recommendation_level = "low"
-                st.rerun()
-                
-        with level_cols[1]:
-            if st.button(level_labels[1], key="btn_medium", 
-                       type="primary" if st.session_state.recommendation_level == "medium" else "secondary",
-                       use_container_width=True):
-                st.session_state.recommendation_level = "medium"
-                st.rerun()
-                
-        with level_cols[2]:
-            if st.button(level_labels[2], key="btn_high", 
-                       type="primary" if st.session_state.recommendation_level == "high" else "secondary",
-                       use_container_width=True):
-                st.session_state.recommendation_level = "high"
-                st.rerun()
+        # 移除推荐级别选择按钮，改为显示当前级别信息
+        if DEFAULT_DESIGN_COUNT == 1:
+            level_text = "Low - 将生成1个设计"
+        elif DEFAULT_DESIGN_COUNT == 3:
+            level_text = "Medium - 将生成3个设计"
+        else:  # 5或其他值
+            level_text = "High - 将生成5个设计"
+            
+        st.markdown(f"""
+        <div style="padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 16px; font-weight: bold;">当前推荐级别: {level_text}</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         # 提示词输入区
         st.markdown("#### Describe your desired T-shirt design:")
@@ -687,12 +701,8 @@ def show_high_recommendation_without_explanation():
                 # 保存用户输入
                 st.session_state.user_prompt = user_prompt
                 
-                # 根据推荐级别确定生成的设计数量
-                design_count = 1
-                if st.session_state.recommendation_level == "medium":
-                    design_count = 3
-                elif st.session_state.recommendation_level == "high":
-                    design_count = 5
+                # 使用固定的设计数量
+                design_count = DEFAULT_DESIGN_COUNT
                 
                 # 清空之前的设计
                 st.session_state.final_design = None
