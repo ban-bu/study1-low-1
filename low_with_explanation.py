@@ -3,20 +3,14 @@ from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
 import os  # 确保os模块在这里导入
-# 添加try-except导入cairosvg，避免因缺少这个库而导致整个应用崩溃
+# 移除cairosvg依赖，使用svglib作为唯一的SVG处理库
 try:
-    import cairosvg
-    CAIROSVG_AVAILABLE = True
+    from svglib.svglib import svg2rlg
+    from reportlab.graphics import renderPM
+    SVGLIB_AVAILABLE = True
 except ImportError:
-    CAIROSVG_AVAILABLE = False
-    # 尝试导入备选SVG处理库
-    try:
-        from svglib.svglib import svg2rlg
-        from reportlab.graphics import renderPM
-        SVGLIB_AVAILABLE = True
-    except ImportError:
-        SVGLIB_AVAILABLE = False
-        st.warning("SVG处理库未安装，SVG格式转换功能将不可用")
+    SVGLIB_AVAILABLE = False
+    st.warning("SVG processing libraries not installed, SVG conversion will not be available")
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 import re
@@ -24,6 +18,10 @@ import math
 # 导入面料纹理模块
 from fabric_texture import apply_fabric_texture
 import uuid
+import json
+# 导入并行处理库
+import concurrent.futures
+import time
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
