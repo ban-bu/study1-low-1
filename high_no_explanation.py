@@ -55,7 +55,7 @@ def convert_svg_to_png(svg_content):
         return None
 
 # 设置默认生成的设计数量，取代UI上的选择按钮
-DEFAULT_DESIGN_COUNT = 5  # 可以设置为1, 3, 5，分别对应原来的low, medium, high
+DEFAULT_DESIGN_COUNT = 1  # 可以设置为1, 3, 5，分别对应原来的low, medium, high
 
 def get_ai_design_suggestions(user_preferences=None):
     """Get design suggestions from GPT-4o-mini with more personalized features"""
@@ -463,7 +463,7 @@ def show_high_recommendation_without_explanation():
     st.markdown("### Study1-Let AI Design Your T-shirt")
     
     # 显示实验组和设计数量信息
-    st.info(f"您当前在Study1实验组，AI将为您生成 {DEFAULT_DESIGN_COUNT} 个T恤设计方案")
+    st.info(f"You are currently in Study1, and AI will generate {DEFAULT_DESIGN_COUNT} T-shirt design options for you")
     
     # 初始化会话状态变量
     if 'user_prompt' not in st.session_state:
@@ -627,15 +627,15 @@ def show_high_recommendation_without_explanation():
         
         # 移除推荐级别选择按钮，改为显示当前级别信息
         if DEFAULT_DESIGN_COUNT == 1:
-            level_text = "Low - 将生成1个设计"
+            level_text = "Low - will generate 1 design"
         elif DEFAULT_DESIGN_COUNT == 3:
-            level_text = "Medium - 将生成3个设计"
+            level_text = "Medium - will generate 3 designs"
         else:  # 5或其他值
-            level_text = "High - 将生成5个设计"
+            level_text = "High - will generate 5 designs"
             
         st.markdown(f"""
         <div style="padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 16px; font-weight: bold;">当前推荐级别: {level_text}</p>
+        <p style="margin: 0; font-size: 16px; font-weight: bold;">Current recommendation level: {level_text}</p>
         </div>
         """, unsafe_allow_html=True)
         
