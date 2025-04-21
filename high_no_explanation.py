@@ -565,7 +565,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True, width=600)
+                            st.image(design, use_container_width=True, width=1000)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
