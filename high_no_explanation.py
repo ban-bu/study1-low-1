@@ -553,7 +553,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True)
+                            st.image(design, use_container_width=True, width=600)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
@@ -575,7 +575,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True)
+                            st.image(design, use_container_width=True, width=600)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
@@ -598,7 +598,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True)
+                            st.image(design, use_container_width=True, width=600)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
@@ -650,29 +650,13 @@ def show_high_recommendation_without_explanation():
         </div>
         """, unsafe_allow_html=True)
         
-        # 三个关键词输入框
-        keyword_cols = st.columns(3)
-        
         # 初始化关键词状态
-        if 'keyword1' not in st.session_state:
-            st.session_state.keyword1 = ""
-        if 'keyword2' not in st.session_state:
-            st.session_state.keyword2 = ""
-        if 'keyword3' not in st.session_state:
-            st.session_state.keyword3 = ""
+        if 'keywords' not in st.session_state:
+            st.session_state.keywords = ""
         
         # 关键词输入框
-        with keyword_cols[0]:
-            keyword1 = st.text_input("Style", value=st.session_state.keyword1, 
-                                    placeholder="e.g., casual, elegant", key="input_keyword1")
-        
-        with keyword_cols[1]:
-            keyword2 = st.text_input("Theme", value=st.session_state.keyword2, 
-                                    placeholder="e.g., nature, sports", key="input_keyword2")
-        
-        with keyword_cols[2]:
-            keyword3 = st.text_input("Color", value=st.session_state.keyword3, 
-                                    placeholder="e.g., blue, vibrant", key="input_keyword3")
+        keywords = st.text_input("Enter keywords for your design", value=st.session_state.keywords, 
+                              placeholder="e.g., casual, nature, blue", key="input_keywords")
         
         # 生成设计按钮
         generate_col = st.empty()
@@ -686,17 +670,14 @@ def show_high_recommendation_without_explanation():
         # 生成设计按钮事件处理
         if generate_button:
             # 保存用户输入的关键词
-            st.session_state.keyword1 = keyword1
-            st.session_state.keyword2 = keyword2
-            st.session_state.keyword3 = keyword3
+            st.session_state.keywords = keywords
             
-            # 检查是否至少输入了一个关键词
-            if not (keyword1 or keyword2 or keyword3):
+            # 检查是否输入了关键词
+            if not keywords:
                 st.error("Please enter at least one keyword")
             else:
-                # 组合关键词成为完整提示词
-                keywords = [k for k in [keyword1, keyword2, keyword3] if k]
-                user_prompt = ", ".join(keywords)
+                # 直接使用用户输入的关键词作为提示词
+                user_prompt = keywords
                 
                 # 保存用户输入
                 st.session_state.user_prompt = user_prompt
