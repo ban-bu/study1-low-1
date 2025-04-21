@@ -128,12 +128,12 @@ def generate_vector_image(prompt, background_color=None):
     # 如果提供了背景颜色，在提示中指定
     color_prompt = ""
     if background_color:
-        color_prompt = f" with exact background color {background_color}"
+        color_prompt = f" with EXACT RGB background color matching {background_color}"
     
     try:
         resp = client.images.generate(
             model="dall-e-3",
-            prompt=prompt + f" (Make sure the image has a solid color background{color_prompt}, NOT transparent)",
+            prompt=prompt + f" (Make sure the image has a solid{color_prompt} background, NOT transparent. This is very important for my design!)",
             n=1,
             size="1024x1024",
             quality="standard"
@@ -300,21 +300,49 @@ def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent
     chest_left = (img_width - chest_width) // 2
     chest_top = int(img_height * 0.2)
     
-    # 确保logo没有透明背景，使用与T恤相同的背景色
+    # 准备logo图像
+    logo_with_bg = logo_image.copy().convert("RGBA")
+    
+    # 提取logo前景，抛弃原始背景
+    # 分析logo图像以找到可能的logo前景
+    data = logo_with_bg.getdata()
+    logo_pixels = []
+    
+    # 使用与T恤相同的背景色
     if background_color:
         # 转换十六进制颜色为RGB
         bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)) + (255,)
     else:
         bg_color = (255, 255, 255, 255)
     
-    # 创建与T恤颜色相同的背景
-    color_bg = Image.new("RGBA", logo_image.size, bg_color)
-    # 合成图像，消除透明度
-    logo_with_bg = Image.alpha_composite(color_bg, logo_image)
+    # 创建新的图像，完全使用T恤的颜色作为背景
+    new_logo = Image.new("RGBA", logo_with_bg.size, bg_color)
     
-    # 调整Logo大小 - 增大图案尺寸
+    # 非常简单的方法：仅保留明显不是背景的像素
+    # 这种方法可能会导致logo边缘不够平滑，但能确保背景颜色完全匹配
+    threshold = 60  # 调整此值以控制多少像素被视为前景
+    
+    for y in range(logo_with_bg.height):
+        for x in range(logo_with_bg.width):
+            pixel = logo_with_bg.getpixel((x, y))
+            
+            # 计算像素与背景色的差异
+            if len(pixel) == 4:  # RGBA
+                r_diff = abs(pixel[0] - bg_color[0])
+                g_diff = abs(pixel[1] - bg_color[1])
+                b_diff = abs(pixel[2] - bg_color[2])
+                diff = r_diff + g_diff + b_diff
+                
+                # 如果像素与背景色差异足够大，则认为是前景
+                if diff > threshold:
+                    new_logo.putpixel((x, y), pixel)
+    
+    # 使用处理后的logo
+    logo_with_bg = new_logo
+    
+    # 调整Logo大小
     logo_size_factor = size_percent / 100
-    logo_width = int(chest_width * logo_size_factor * 0.7)  # 从0.5增加到0.7
+    logo_width = int(chest_width * logo_size_factor * 0.7)
     logo_height = int(logo_width * logo_with_bg.height / logo_with_bg.width)
     logo_resized = logo_with_bg.resize((logo_width, logo_height), Image.LANCZOS)
     
