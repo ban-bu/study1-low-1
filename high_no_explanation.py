@@ -271,7 +271,7 @@ def apply_text_to_shirt(image, text, color_hex="#FFFFFF", font_size=80):
     
     return result_image
 
-def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent=30):
+def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent=60):
     """Apply logo to T-shirt image"""
     if logo_image is None:
         return shirt_image
@@ -292,9 +292,9 @@ def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent
     # 合成图像，消除透明度
     logo_with_bg = Image.alpha_composite(white_bg, logo_image)
     
-    # 调整Logo大小
+    # 调整Logo大小 - 增大图案尺寸
     logo_size_factor = size_percent / 100
-    logo_width = int(chest_width * logo_size_factor * 0.5)
+    logo_width = int(chest_width * logo_size_factor * 0.7)  # 从0.5增加到0.7
     logo_height = int(logo_width * logo_with_bg.height / logo_with_bg.width)
     logo_resized = logo_with_bg.resize((logo_width, logo_height), Image.LANCZOS)
     
@@ -413,7 +413,7 @@ def generate_complete_design(design_prompt, variation_id=None):
         
         # 应用Logo (如果有)
         if logo_image:
-            final_design = apply_logo_to_shirt(colored_shirt, logo_image, "center", 30)
+            final_design = apply_logo_to_shirt(colored_shirt, logo_image, "center", 60)
         
         return final_design, {
             "color": {"hex": color_hex, "name": design_suggestions.get("color", {}).get("name", "Custom Color")},
@@ -565,7 +565,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True, width=1000)
+                            st.image(design, use_container_width=True)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
@@ -587,7 +587,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True, width=600)
+                            st.image(design, use_container_width=True)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
@@ -610,7 +610,7 @@ def show_high_recommendation_without_explanation():
                                 st.markdown(f"<p style='text-align:center;'>Design {i+1}</p>", unsafe_allow_html=True)
                             
                             # 显示设计并添加点击功能
-                            st.image(design, use_container_width=True, width=600)
+                            st.image(design, use_container_width=True)
                             if st.button(f"Select Design {i+1}", key=f"select_design_{i}"):
                                 st.session_state.selected_design_index = i
                                 st.session_state.final_design = design
