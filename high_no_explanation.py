@@ -130,10 +130,13 @@ def generate_vector_image(prompt, background_color=None):
     if background_color:
         color_prompt = f" with EXACT RGB background color matching {background_color}"
     
+    # 添加禁止生成T恤或服装的提示
+    prohibition = " DO NOT include any t-shirts, clothing, mockups, or how the design would look when applied to products. Create ONLY the standalone graphic."
+    
     try:
         resp = client.images.generate(
             model="dall-e-3",
-            prompt=prompt + f" (Make sure the image has a solid{color_prompt} background, NOT transparent. This is very important for my design!)",
+            prompt=prompt + f" (Make sure the image has a solid{color_prompt} background, NOT transparent. This is very important for my design!){prohibition}",
             n=1,
             size="1024x1024",
             quality="standard"
@@ -452,8 +455,19 @@ def generate_complete_design(design_prompt, variation_id=None):
                 if variation_id <= len(modifiers):
                     logo_desc = f"{modifiers[variation_id-1]} {logo_description}"
             
-            # 修改Logo提示词，确保生成的Logo有与T恤颜色相匹配的背景
-            logo_prompt = f"Create a Logo design for printing: {logo_desc}. Requirements: 1. Simple professional design 2. Solid background color matching the t-shirt 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
+            # 修改Logo提示词，确保生成的Logo有与T恤颜色相匹配的背景，并且不会包含T恤图像
+            logo_prompt = f"""Create a Logo design for printing: {logo_desc}. 
+            Requirements: 
+            1. Simple professional design
+            2. Solid background color matching the t-shirt
+            3. Clear and distinct graphic
+            4. Good contrast with colors that will show well on fabric
+            5. IMPORTANT: Do NOT include any t-shirts, clothing, or apparel in the design
+            6. IMPORTANT: Do NOT include any mockups or product previews
+            7. IMPORTANT: Create ONLY the logo graphic itself, NOT how it would look on a t-shirt
+            8. NO META REFERENCES - do not show the logo applied to anything
+            9. Design should be a standalone graphic symbol/icon only"""
+            
             logo_image = generate_vector_image(logo_prompt, color_hex)
         
         # 最终设计 - 不添加文字
