@@ -625,19 +625,19 @@ def show_high_recommendation_without_explanation():
         # 设计提示词和推荐级别选择区
         st.markdown("### Design Options")
         
-        # 移除推荐级别选择按钮，改为显示当前级别信息
-        if DEFAULT_DESIGN_COUNT == 1:
-            level_text = "Low - will generate 1 design"
-        elif DEFAULT_DESIGN_COUNT == 3:
-            level_text = "Medium - will generate 3 designs"
-        else:  # 5或其他值
-            level_text = "High - will generate 5 designs"
+        # # 移除推荐级别选择按钮，改为显示当前级别信息
+        # if DEFAULT_DESIGN_COUNT == 1:
+        #     level_text = "Low - will generate 1 design"
+        # elif DEFAULT_DESIGN_COUNT == 3:
+        #     level_text = "Medium - will generate 3 designs"
+        # else:  # 5或其他值
+        #     level_text = "High - will generate 5 designs"
             
-        st.markdown(f"""
-        <div style="padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 16px; font-weight: bold;">Current recommendation level: {level_text}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # st.markdown(f"""
+        # <div style="padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 20px;">
+        # <p style="margin: 0; font-size: 16px; font-weight: bold;">Current recommendation level: {level_text}</p>
+        # </div>
+        # """, unsafe_allow_html=True)
         
         # 提示词输入区
         st.markdown("#### Describe your desired T-shirt design:")
