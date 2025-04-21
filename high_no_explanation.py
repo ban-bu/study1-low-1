@@ -127,7 +127,7 @@ def generate_vector_image(prompt):
     try:
         resp = client.images.generate(
             model="dall-e-3",
-            prompt=prompt,
+            prompt=prompt + " (Make sure the image has a solid color background, NOT transparent)",
             n=1,
             size="1024x1024",
             quality="standard"
@@ -146,7 +146,13 @@ def generate_vector_image(prompt):
                     # 使用更新后的SVG处理函数
                     return convert_svg_to_png(image_resp.content)
                 else:
-                    return Image.open(BytesIO(image_resp.content)).convert("RGBA")
+                    # 确保图像没有透明背景
+                    img = Image.open(BytesIO(image_resp.content)).convert("RGBA")
+                    # 创建白色背景图像
+                    white_bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
+                    # 合成图像，消除透明度
+                    img = Image.alpha_composite(white_bg, img)
+                    return img
             else:
                 st.error(f"Failed to download image, status code: {image_resp.status_code}")
         except Exception as download_err:
@@ -280,11 +286,17 @@ def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent
     chest_left = (img_width - chest_width) // 2
     chest_top = int(img_height * 0.2)
     
+    # 确保logo没有透明背景
+    # 创建白色背景图像
+    white_bg = Image.new("RGBA", logo_image.size, (255, 255, 255, 255))
+    # 合成图像，消除透明度
+    logo_with_bg = Image.alpha_composite(white_bg, logo_image)
+    
     # 调整Logo大小
     logo_size_factor = size_percent / 100
     logo_width = int(chest_width * logo_size_factor * 0.5)
-    logo_height = int(logo_width * logo_image.height / logo_image.width)
-    logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+    logo_height = int(logo_width * logo_with_bg.height / logo_with_bg.width)
+    logo_resized = logo_with_bg.resize((logo_width, logo_height), Image.LANCZOS)
     
     # 根据位置确定坐标
     position = position.lower() if isinstance(position, str) else "center"
