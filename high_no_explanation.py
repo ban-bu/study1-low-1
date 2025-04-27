@@ -125,10 +125,11 @@ def generate_vector_image(prompt, background_color=None):
     """Generate an image based on the prompt with specified background color"""
     client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
     
-    # 如果提供了背景颜色，在提示中指定
+    # 如果提供了背景颜色，在提示中明确指定
     color_prompt = ""
     if background_color:
-        color_prompt = f" with EXACT RGB background color matching {background_color}"
+        # 更加强调颜色匹配，指定确切的HEX色号
+        color_prompt = f" with EXACT RGB background color HEX:{background_color} (you MUST use this exact HEX color code for the background)"
     
     # 添加禁止生成T恤或服装的提示
     prohibition = " DO NOT include any t-shirts, clothing, mockups, or how the design would look when applied to products. Create ONLY the standalone graphic."
@@ -136,7 +137,7 @@ def generate_vector_image(prompt, background_color=None):
     try:
         resp = client.images.generate(
             model="dall-e-3",
-            prompt=prompt + f" (Make sure the image has a solid{color_prompt} background, NOT transparent. This is very important for my design!){prohibition}",
+            prompt=prompt + f" (Make sure the image has a solid{color_prompt} background, NOT transparent. Color matching is CRITICAL - background must be EXACTLY {background_color}!){prohibition}",
             n=1,
             size="1024x1024",
             quality="standard"
@@ -418,35 +419,10 @@ def generate_complete_design(design_prompt, variation_id=None):
         return None, {"error": f"Error loading T-shirt image: {str(e)}"}
     
     try:
-        # 如果提供了变体ID，为不同变体生成不同的设计
+        # 使用AI建议的颜色和面料
         color_hex = design_suggestions.get("color", {}).get("hex", "#FFFFFF")
+        color_name = design_suggestions.get("color", {}).get("name", "Custom Color")
         fabric_type = design_suggestions.get("fabric", "Cotton")
-        
-        # 根据变体ID调整颜色和纹理
-        if variation_id is not None:
-            # 为不同变体生成不同的颜色 (简单的色调变化)
-            color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-            r, g, b = color_rgb
-            
-            if variation_id == 1:  # 稍微调亮
-                r = min(255, int(r * 1.2))
-                g = min(255, int(g * 1.2))
-                b = min(255, int(b * 1.2))
-            elif variation_id == 2:  # 稍微调暗
-                r = int(r * 0.8)
-                g = int(g * 0.8)
-                b = int(b * 0.8)
-            elif variation_id == 3:  # 更偏向红色
-                r = min(255, int(r * 1.3))
-            elif variation_id == 4:  # 更偏向蓝色
-                b = min(255, int(b * 1.3))
-            
-            color_hex = f"#{r:02x}{g:02x}{b:02x}"
-            
-            # 可能的面料变化
-            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
-            if variation_id < len(fabric_options):
-                fabric_type = fabric_options[variation_id % len(fabric_options)]
         
         # 1. 应用颜色和纹理
         colored_shirt = change_shirt_color(
@@ -461,26 +437,21 @@ def generate_complete_design(design_prompt, variation_id=None):
         logo_image = None
         
         if logo_description:
-            # 为变体版本可能稍微修改logo描述
-            logo_desc = logo_description
-            if variation_id is not None and variation_id > 0:
-                modifiers = ["minimalist", "colorful", "abstract", "geometric", "vintage"]
-                if variation_id <= len(modifiers):
-                    logo_desc = f"{modifiers[variation_id-1]} {logo_description}"
-            
-            # 修改Logo提示词，确保生成的Logo有与T恤颜色相匹配的背景，并且不会包含T恤图像
-            logo_prompt = f"""Create a Logo design for printing: {logo_desc}. 
+            # 修改Logo提示词，明确指定颜色代码，确保生成的Logo背景与T恤颜色完全一致
+            logo_prompt = f"""Create a Logo design for printing: {logo_description}. 
             Requirements: 
             1. Simple professional design
-            2. Solid background color matching the t-shirt
+            2. IMPORTANT: The background MUST be exactly {color_name} color with HEX code {color_hex}
             3. Clear and distinct graphic
             4. Good contrast with colors that will show well on fabric
             5. IMPORTANT: Do NOT include any t-shirts, clothing, or apparel in the design
             6. IMPORTANT: Do NOT include any mockups or product previews
             7. IMPORTANT: Create ONLY the logo graphic itself, NOT how it would look on a t-shirt
             8. NO META REFERENCES - do not show the logo applied to anything
-            9. Design should be a standalone graphic symbol/icon only"""
+            9. Design should be a standalone graphic symbol/icon only
+            10. CRITICAL: The entire background must be solid color {color_hex} with no variations"""
             
+            # 使用当前T恤颜色生成logo
             logo_image = generate_vector_image(logo_prompt, color_hex)
         
         # 最终设计 - 不添加文字
@@ -492,10 +463,10 @@ def generate_complete_design(design_prompt, variation_id=None):
             final_design = apply_logo_to_shirt(colored_shirt, logo_image, "center", 60, color_hex)
         
         return final_design, {
-            "color": {"hex": color_hex, "name": design_suggestions.get("color", {}).get("name", "Custom Color")},
+            "color": {"hex": color_hex, "name": color_name},
             "fabric": fabric_type,
             "logo": logo_description,
-            "variation_id": variation_id
+            "design_index": 0 if variation_id is None else variation_id  # 使用design_index替代variation_id
         }
     
     except Exception as e:
@@ -503,8 +474,44 @@ def generate_complete_design(design_prompt, variation_id=None):
         traceback_str = traceback.format_exc()
         return None, {"error": f"Error generating design: {str(e)}\n{traceback_str}"}
 
+def generate_single_design(design_index):
+    try:
+        # 为每个设计添加轻微的提示词变化，确保设计多样性
+        design_variations = [
+            "",  # 原始提示词
+            "modern and minimalist",
+            "colorful and vibrant",
+            "vintage and retro",
+            "elegant and simple"
+        ]
+        
+        # 选择合适的变化描述词
+        variation_desc = ""
+        if design_index < len(design_variations):
+            variation_desc = design_variations[design_index]
+        
+        # 创建变化的提示词
+        if variation_desc:
+            # 将变化描述词添加到原始提示词
+            varied_prompt = f"{design_prompt}, {variation_desc}"
+        else:
+            varied_prompt = design_prompt
+        
+        # 完整的独立流程 - 每个设计独立获取AI建议、生成图片，确保颜色一致性
+        # 使用独立提示词生成完全不同的设计
+        design, info = generate_complete_design(varied_prompt)
+        
+        # 添加设计索引到信息中以便排序
+        if info and isinstance(info, dict):
+            info["design_index"] = design_index
+        
+        return design, info
+    except Exception as e:
+        print(f"Error generating design {design_index}: {e}")
+        return None, {"error": f"Failed to generate design {design_index}"}
+
 def generate_multiple_designs(design_prompt, count=1):
-    """Generate multiple T-shirt designs in parallel"""
+    """Generate multiple T-shirt designs in parallel - independent designs rather than variations"""
     if count <= 1:
         # 如果只需要一个设计，直接生成不需要并行
         base_design, base_info = generate_complete_design(design_prompt)
@@ -515,19 +522,8 @@ def generate_multiple_designs(design_prompt, count=1):
     
     designs = []
     
-    # 定义一个函数来生成单个设计，用于并行处理
-    def generate_single_design(variation_id):
-        try:
-            if variation_id == 0:  # 基础设计
-                return generate_complete_design(design_prompt)
-            else:  # 变体设计
-                return generate_complete_design(design_prompt, variation_id=variation_id)
-        except Exception as e:
-            print(f"Error generating design {variation_id}: {e}")
-            return None, {"error": f"Failed to generate design {variation_id}"}
-    
     # 创建线程池
-    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(count, 5)) as executor:
         # 提交所有任务
         future_to_id = {executor.submit(generate_single_design, i): i for i in range(count)}
         
@@ -541,8 +537,8 @@ def generate_multiple_designs(design_prompt, count=1):
             except Exception as e:
                 print(f"Design {design_id} generated an exception: {e}")
     
-    # 按照原始ID顺序排序
-    designs.sort(key=lambda x: x[1].get("variation_id", 0) if x[1] and "variation_id" in x[1] else 0)
+    # 按照设计索引排序
+    designs.sort(key=lambda x: x[1].get("design_index", 0) if x[1] and "design_index" in x[1] else 0)
     
     return designs
 
@@ -786,7 +782,7 @@ def show_high_recommendation_without_explanation():
                     
                     # 创建进度条和状态消息在输入框下方
                     progress_bar = progress_area.progress(0)
-                    message_area.info(f"AI is generating {design_count} designs for you, please wait...")
+                    message_area.info(f"AI is generating {design_count} unique designs with consistent colors for you, please wait...")
                     
                     # 记录开始时间
                     start_time = time.time()
@@ -795,16 +791,16 @@ def show_high_recommendation_without_explanation():
                     designs = []
                     
                     # 生成单个设计的安全函数
-                    def generate_single_safely(variation_id=None):
+                    def generate_single_safely(design_index):
                         try:
-                            return generate_complete_design(user_prompt, variation_id)
+                            return generate_complete_design(user_prompt, design_index)
                         except Exception as e:
                             message_area.error(f"Error generating design: {str(e)}")
                             return None, {"error": f"Failed to generate design: {str(e)}"}
                     
                     # 对于单个设计，直接生成
                     if design_count == 1:
-                        design, info = generate_single_safely()
+                        design, info = generate_single_safely(0)
                         if design:
                             designs.append((design, info))
                         progress_bar.progress(100)
@@ -840,7 +836,7 @@ def show_high_recommendation_without_explanation():
                                 update_progress()
                         
                         # 按照ID排序设计
-                        designs.sort(key=lambda x: x[1].get("variation_id", 0) if x[1] and "variation_id" in x[1] else 0)
+                        designs.sort(key=lambda x: x[1].get("design_index", 0) if x[1] and "design_index" in x[1] else 0)
                     
                     # 记录结束时间
                     end_time = time.time()
