@@ -444,9 +444,9 @@ def generate_complete_design(design_prompt, variation_id=None):
             2. IMPORTANT: The background MUST be exactly {color_name} color with HEX code {color_hex}
             3. Clear and distinct graphic
             4. Good contrast with colors that will show well on fabric
-            5. IMPORTANT: Do NOT include any t-shirts, clothing, or apparel in the design
+            
             6. IMPORTANT: Do NOT include any mockups or product previews
-            7. IMPORTANT: Create ONLY the logo graphic itself, NOT how it would look on a t-shirt
+            7. IMPORTANT: Create ONLY the logo graphic itself
             8. NO META REFERENCES - do not show the logo applied to anything
             9. Design should be a standalone graphic symbol/icon only
             10. CRITICAL: The entire background must be solid color {color_hex} with no variations"""
